@@ -100,6 +100,10 @@ Other Prelude modules are much easier with fewer complex dependencies.
 -- #hide
 module GHC.Base
         (
+        error,
+        errorLoc,
+        undefined,
+        undefinedLoc,
         module GHC.Base,
         module GHC.Classes,
         module GHC.CString,
@@ -116,7 +120,8 @@ import GHC.Classes
 import GHC.CString
 import GHC.Magic
 import GHC.Prim
-import GHC.Err
+import GHC.Err hiding (error, undefined)
+import qualified GHC.Err as GHC
 import GHC.PrimWrappers
 import {-# SOURCE #-} GHC.IO (failIO)
 
@@ -136,6 +141,27 @@ infixl 1  >>, >>=
 infixr 0  $
 
 default ()              -- Double isn't available yet
+
+-- | 'error' stops execution and displays an error message.
+error :: [Char] -> a
+error = GHC.error
+{-# REWRITE_WITH_LOCATION error errorLoc #-}
+
+errorLoc :: String -> [Char] -> a
+errorLoc loc s = GHC.error (loc ++ ": " ++ s)
+
+-- | A special case of 'error'.
+-- It is expected that compilers will recognize this and insert error
+-- messages which are more appropriate to the context in which 'undefined'
+-- appears.
+
+undefined :: a
+undefined = GHC.undefined
+{-# REWRITE_WITH_LOCATION undefined undefinedLoc #-}
+
+undefinedLoc :: [Char] -> a
+undefinedLoc = (`errorLoc` "Prelude.undefined")
+
 \end{code}
 
 
